@@ -1,4 +1,4 @@
-# eof_trend_analysis
+# EOF trend analysis
 
 Open source code for paper "Estimating temperature trends with EOF analysis and application to polar regions"
 
