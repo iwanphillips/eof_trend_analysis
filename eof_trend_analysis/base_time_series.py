@@ -4,8 +4,9 @@ from packages import *
 def line(x, a, b):
     return a + b*x 
 
-# get d
+'''The below functions are to calculate d with DFA combined with kernel (Bradley) method'''
 
+# Calculate rms error
 def calc_rms(x, scale, order):
 
     shape = (x.shape[0]//scale, scale)
@@ -20,6 +21,7 @@ def calc_rms(x, scale, order):
         rms[e] = np.sqrt(np.mean((xcut-xfit)**2))
     return rms
 
+# DFA standard method
 def dfa_standard(x, order, scale_lim=[5,9], scale_dens=0.25):
 
     y = np.cumsum(x - np.mean(x))
@@ -30,8 +32,6 @@ def dfa_standard(x, order, scale_lim=[5,9], scale_dens=0.25):
         fluct[e] = np.sqrt(np.mean(calc_rms(y, sc, order)**2))
         
     coeff = np.polyfit(np.log2(scales), np.log2(fluct), 1)
-    #plt.plot(np.log2(scales), np.log2(fluct), 'o')
-    #plt.plot(scales, fluct, 'o')
 
     return scales, fluct, coeff 
 
@@ -41,6 +41,7 @@ def peak(x, c):
 def lin_interp(x, y, i, half):
     return x[i] + (x[i+1] - x[i]) * ((half - y[i]) / (y[i+1] - y[i]))
 
+# Calculate FWHM
 def half_max_x(x, y):
     half = max(y)/2.0
     signs = np.sign(np.add(y, -half))
@@ -56,6 +57,7 @@ def half_max_x(x, y):
     return [lin_interp(x, y, zero_crossings_i[0], half),
             lin_interp(x, y, zero_crossings_i[1], half)]
 
+# Generate ensembles
 def generate_individual_ensembles_ordered_fixed(d2, limits, lpower = 0, epower = 1, min_points = 10):
     
     idx = np.where(np.logical_and(d2[:,0] >= limits[0], d2[:,0] <= limits[1]))[0]
@@ -86,8 +88,8 @@ def generate_individual_ensembles_ordered_fixed(d2, limits, lpower = 0, epower =
     return [np.array(lhs_arr), np.array(rhs_arr), np.array(slope), 
             np.array(error), np.array(weights), np.array(offset)] 
 
+# DFA with the kernel (Bradley) method
 def dfa_bradley(x, order, scale_lim=[4,10], scale_dens=0.2, P = 2, Q = 2, plot=False):
-    # Previously I was thinking the default should be scale_lim=[5,10]
 
     y = np.cumsum(x - np.mean(x))
     scales = (2**np.arange(scale_lim[0], scale_lim[1],
@@ -118,8 +120,7 @@ def dfa_bradley(x, order, scale_lim=[4,10], scale_dens=0.2, P = 2, Q = 2, plot=F
     else:
         return scales, fluct, mean, error 
 
-    
-# get phi 
+'''The below code is for fractional differencing such that the AR 1 parameter (phi) can then be calculated''' 
 
 #@jit(nopython=True, parallel=True)
 def grlet_diff(data_, memory_, d_, delta_t_=1.0):
@@ -140,9 +141,8 @@ def grlet_diff(data_, memory_, d_, delta_t_=1.0):
         differenced_data[i] = delta_t_**(-d_) * summe
 
     return differenced_data
-
-
-# arfima
+    
+'''The below code is to creat ARFIMA models'''
 
 def __ma_model(
     params: list[float],
@@ -214,8 +214,9 @@ def arfima(
     return series[-n_points:]
 
 
-# get p value
+'''The below code is to obtain p values both analytically and via Monte Carlo simulations'''
 
+# Asymptotic analytical solution for ARFIMA(1,d,0) process
 def asymp(a, d, T):
     
     f = ((1+a)/((1-a)*(2*hyp2f1(1,d,1-d,a) - 1)))*((36*(1-2*d)*gamma(1-d))/(d*(1+2*d)*(3+2*d)*gamma(d)))
@@ -245,6 +246,7 @@ def ttest(x, value):
    
     return(tstat, pvalue)
 
+# t test analytical 
 def ttest_an(a, d, var, value, N=25567): 
     
     mean = 0
@@ -257,8 +259,21 @@ def ttest_an(a, d, var, value, N=25567):
    
     return(pvalue, vtr)
 
-#session.evaluate('deriv[a_, d_] = (72 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d)^2 Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (72 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d)^2 (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (36 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d^2 (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (72 (-1 + a^2) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (36 (-1 + a^2) (1 - 2 d) Gamma[1 - d] PolyGamma[0, 1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (36 (-1 + a^2) (1 - 2 d) Gamma[1 - d] PolyGamma[0, d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + (72 (-1 + a^2) (1 - 2 d) Gamma[1 - d] (-\!\(\*SuperscriptBox[\(Hypergeometric2F1\), TagBox[RowBox[{"(", RowBox[{"0", ",", "0", ",", "1", ",", "0"}], ")"}],Derivative],MultilineFunction->None]\)[1, d, 1 - d, a] + \!\(\*SuperscriptBox[\(Hypergeometric2F1\), TagBox[RowBox[{"(", RowBox[{"0", ",", "1", ",", "0", ",", "0"}], ")"}],Derivative],MultilineFunction->None]\)[1, d, 1 - d, a]))/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])^2)')
+'''
+The following is Mathematica code for the calculation of the full variance of the ARFIMA(1,d,0) model
 
+session.evaluate('deriv[a_, d_] = (72 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d)^2 Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) 
++ (72 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d)^2 (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + 
+(36 (-1 + a^2) (1 - 2 d) Gamma[1 - d])/((1 - a)^2 d^2 (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + 
+(72 (-1 + a^2) Gamma[1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + 
+(36 (-1 + a^2) (1 - 2 d) Gamma[1 - d] PolyGamma[0, 1 - d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + 
+(36 (-1 + a^2) (1 - 2 d) Gamma[1 - d] PolyGamma[0, d])/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])) + 
+(72 (-1 + a^2) (1 - 2 d) Gamma[1 - d] (-\!\(\*SuperscriptBox[\(Hypergeometric2F1\), TagBox[RowBox[{"(", RowBox[{"0", ",", "0", ",", "1", ",", "0"}], ")"}],Derivative]
+,MultilineFunction->None]\)[1, d, 1 - d, a] + \!\(\*SuperscriptBox[\(Hypergeometric2F1\), TagBox[RowBox[{"(", RowBox[{"0", ",", "1", ",", "0", ",", "0"}], ")"}],Derivative],
+MultilineFunction->None]\)[1, d, 1 - d, a]))/((1 - a)^2 d (1 + 2 d) (3 + 2 d) Gamma[d] (-1 + 2 Hypergeometric2F1[1, d, 1 - d, a])^2)')
+'''
+
+# t test considering error of d (Delta d)
 def ttest_an_derr(a, d, var, value, del_d, N=25567): 
     
     mean = 0
@@ -268,11 +283,10 @@ def ttest_an_derr(a, d, var, value, del_d, N=25567):
     pvalue = 1 - stats.t.cdf(tstat, df=10000)
     
     vtr = []
-    #vtr.append(var*(N**(2*d-3))*np.sqrt(asymp(a, d, 1)**2 + (del_d[0]**2)*(session.evaluate('deriv['+str(a)+','+str(d)+']')**2)))
-    #vtr.append(var*(N**(2*d-3))*np.sqrt(asymp(a, d, 1)**2 + (del_d[1]**2)*(session.evaluate('deriv['+str(a)+','+str(d)+']')**2)))
    
     return(pvalue, vtr)
-    
+
+# Histogram
 def hist(y, ar, d, r_trend): 
    
     x = np.arange(len(y))
@@ -294,15 +308,13 @@ def hist(y, ar, d, r_trend):
    
     return(tp, vtr)    
 
+# p value
 def p_val(y, ar=1, an=True, d_b=0, order=2): 
     
     x = np.arange(len(y))
 
     scales, fluct, coeff, d_err = dfa_bradley(y, order, scale_lim=[6,11]) 
-    # run again with below code 
     #scales, fluct, coeff = dfa_standard(x, order, scale_lim=[5,11], scale_dens=0.25)
-    #d_err = 0
-    #print(coeff)
     
     d = float(coeff-0.5); print(d) 
     if d_b =='upp': 
@@ -358,7 +370,7 @@ def plot_trend(temp, xlab=[1950, 1980, 2010]):
     ax.plot(x, iv_l, "r--")
     ax.legend(loc="best", ncol=2, fontsize=14)
 
-
+# Remove seasonal trend
 def detrend(df):
     
     df.loc[(df.Temp < -100),'Temp']=np.nan
