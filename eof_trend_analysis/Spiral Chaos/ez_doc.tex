@@ -1,0 +1,282 @@
+%-----------------------------------------------------------------------------%
+%-----------------------------------------------------------------------------%
+%                                                                             %
+%                                 EZ-SPIRAL                                   %
+%                     A Code for Simulating Spiral Waves                      %
+%                                                                             %
+%                                 Version 3                                   %
+%                                                                             %
+%                                                                             %
+% $Revision: 3.2.1.1 $
+% $Date: 2007/05/07 09:50:42 $
+% 
+%-----------------------------------------------------------------------------%
+%-----------------------------------------------------------------------------%
+
+% This is a LaTex source file.
+
+\documentclass[12pt]{article}
+
+\textheight 9in  \textwidth 6.5in
+\topmargin -.7in \oddsidemargin .0in
+
+\begin{document}
+\baselineskip = 20pt plus 1pt minus 1pt
+\parskip = 8pt
+\parindent=0pt
+
+\begin{center} 
+{\bf EZ-SPIRAL DOCUMENTATION} 
+\end{center} 
+
+\bigskip
+{\bf I. Philosophy of EZ-Spiral} 
+\smallskip
+
+EZ-Spiral is a simplified version of the C program that I use to study the
+dynamics of spiral waves in excitable media [1-4,6]. EZ-Spiral is designed to
+be as simple as possible while offering what I believe to be the most
+important features for spiral simulations. These include:
+\begin{list}{dummy}
+{\labelwidth=0.2in\labelsep=4pt\partopsep=-10pt\parsep=-10pt\itemsep=12pt}
+\item[(1)] Continuous range of spatio-temporal resolutions.
+\item[(2)] Choice of implicit or explicit time stepping of the reaction 
+           kinetics. 
+\item[(3)] Choice of ratio of diffusion coefficients.
+\item[(4)] Computation of spiral-tip location.
+\item[(5)] Automatic generation of initial conditions.
+\item[(6)] Interactive graphics with control of spiral location.
+\end{list}
+
+The code should be of use to those who are interested in the serious
+study of excitable media as well as those who simply want to generate
+pretty pictures. Most of the documentation is contained in the code
+itself. The notation for the model reaction-diffusion equations and a
+description of parameters are given in Sec. IV.
+
+{\bf Changes in Version 2.}  Version 2 of EZ-Spiral fixes many of the
+awkward properties of Version 1.  In particular, almost all parameters
+one routinely wants to change are now contained in {\em task.dat} and
+are read in at run time.  This eliminates most of the recompiling that
+was necessary with Version 1.  The other major change is that the
+graphics subroutines have been rewritten using X11 calls and hence the
+code is portable to a large number of machines.  Elementary graphics
+are even available for black and white X-terminals.  Finally, parts of
+the code have been cleaned up and simplified.  By editing just two
+lines it is now possible to simulate a large variety of models with
+EZ-Spiral (see Sec. IV).  I include at the end (Sec. V) a simple
+recipe for obtaining turbulent spirals.  Note that the format of {\em
+task.dat} has changed slightly from Version 1.  The format of the
+field files has not changed.
+
+{\bf Changes in Version 2.3} The primary change in Version 2.3 is that
+the the higher-order implicit $u$ time stepping is implemented.  See [6].
+
+{\bf Changes in Version 3} Version 3 comes from a large re-write of the
+code. It in fact was obtained from reducing EZ-Scroll to the 2D case. I
+decided to keep separate 2D and 3D version of the code. The main new features
+are that the 2D domain can now be a rectangle and the graphics is heavily
+OpenGL based, with primitive X11 calls only used for opening the window and
+for event handling. The format of {\em task.dat} has changed from Version 2.
+
+% \pagebreak
+
+\medskip
+{\bf II. Running EZ-Spiral} 
+\smallskip
+
+{\bf Files:} You should have the following files: {\em ezspiral.c, ezstep.c,
+eztip.c, ezgraphGL.c, ezspiral.h, ezstep.h ezgraphGL.h, task.dat}, and {\em
+Makefile}. You will probably want to save copies of these files (in compressed
+tar format).
+
+{\bf make}: It is up to you to edit {\em Makefile} as necessary for your
+system. You need an ANSI C compiler and for graphics you need X11 and
+OpenGL. If you run on an up-to-date Linux system you should have everything
+you need. Typing {\em make} will make {\em ezspiral}.  If you edit one of the
+source or header files you must remake EZ-Spiral.
+
+{\bf Running:} Make {\em ezspiral} by typing {\em make}. Then run by typing
+{\em ezspiral}. A window should open. With the pointer in the window type a
+{\em space} on the keyboard. A spiral should be generated.  The $v$-field is
+plotted. This is a coarse resolution run showing the speed possible with
+EZ-Spiral simulations.  With the pointer in the EZ-Spiral window, you can move
+the spiral around using the arrow keys on the keyboard.  Center the spiral in
+the box.
+
+A simulation will finish when either:
+
+\begin{list}{dummy}
+{\labelwidth=0.1in\labelsep=0pt\partopsep=-10pt\parsep=-10pt\itemsep=0pt}
+\item[~]the number of time steps set in {\em task.dat} is taken, \\
+	or you type {\em q} or {\em Q} with the pointer in the spiral 
+        window. \\
+	or you type {\em Esc} with the pointer in the spiral window \\
+	or you use the menu produced by the window manager (assuming there
+        is one) to kill the graphics window.
+\end{list}
+The last two possibilities will result in a hard exit with nothing saved.
+
+After a successful run with a soft exit (the first two cases above), you will
+have a file {\em fc.dat} in your directory which contains the final conditions
+of the run (either at the final time or at the type you stopped the simulation
+with {\em q} or {\em Q}). If you copy this file to {\em ic.dat}, then the next
+time you run {\em ezspiral}, this file will be read and used as an initial
+condition.
+
+To get some insight into what the code can do, try the following runs
+in order:
+\begin{enumerate}
+
+\item
+In {\em task.dat}, change {\sf nx} and {\sf ny} from 101 to 201, change {\sf
+Time steps per plot} to 16, and change {\sf verbose} from 2 to 1 (the normal
+value). Copy {\em fc.dat} from the run with {\sf nx}={\sf nx}=101 to {\em
+ic.dat}. Run {\em ezspiral}.  This is a more accurate run and is getting close
+to a fully resolved simulation of the underlying PDEs.
+
+\item
+While the code is running put the pointer in the spiral window.  Typing either
+{\em p} or {\em P} within the spiral window will pause the simulation until
+you type a {\em space} on the keyboard.  Typing {\em t} will toggle tip
+plotting.  Typing {\em u} will show the $u$-field rather than the
+$v$-field. You can go back to the $v$-field by typing {\em v}.  Typing {\em n}
+will show no field. You can, however, still plot the tip path if you desire.
+{\em Note that for coarse simulations, tip finding can produce uncertain
+results and will probably fail.}
+
+\item
+In {\em task.dat} change {\sf write\_tip} from 0 to 1 and {\sf time steps per
+write to history file} to 10.  Now run run {\em ezspiral} again.  After this
+run you will have a file {\em tip.dat} with the path of the spiral tip $(t,
+x_{tip}, y_{tip})$, and a file {\em history.dat} with the time series of
+values $(t,u,v)$ at the grid point $(10,20)$.  You can set the history point
+to some other value in {\em task.dat}.
+
+\item
+Change the kinetics parameter {\sf a} in {\em task.dat} from 0.75 to 0.62.
+Run again. With these parameters the spiral will ``meander''. You can see this
+best by plotting the tip.  
+
+
+\end{enumerate}
+You should have the hang of it by now.
+
+{\bf III. Further Comments on EZ-Spiral} 
+
+It is expected that you will modify the code as needed for your
+purposes.  The code should be more or less self-explanatory. The bulk
+of the code is devoted to I/O, graphics, and tip finding. Almost all
+of the execution time is spent on just a few lines of code in the
+routine {\sf step()} in {\em ezstep.c}.
+
+Note that I have used many external (i.e.~global) variables and have
+not used any structures.  I thought that this would make the code more
+readable, and therefore usable, to those not entirely familiar with C.
+I believe that the crucial {\sf for} loops in routine {\sf step()}
+compile to very efficient code. See comments in {\em ezstep.h}.
+
+I make no claims as to what constitutes a fully resolved simulation of
+the underlying PDEs.  If you are concerned about this I would
+recommend having at least 6 points across the interface (black in the
+$u$-field plot) and a ratio of {\sl dt}/$\epsilon<0.5$.  You might
+also decrease {\sf delta} by an order of magnitude or more.  You
+should experiment for yourself.  Note that for {\sl dt}/$\epsilon<1$
+you can use either the explicit or the implicit form of the reaction
+kinetics.  The explicit form is slightly faster, but the new implicit
+form [6] is definitely more accurate and I highly recommend it.  For
+{\sf delta} very small, you should remove the {\sf if} from the {\sf
+for} loops in {\sf step()}.
+
+In general I believe in the 9-point formula for the Laplacians [1,6],
+rather than the 5-point formula.  The 9-point formula maintains
+rotational symmetry to leading order.  For coarse-grained simulations
+with $D_v=0$ the difference in execution time is small compared with
+what is gained.  If you are unconvinced, run the simulation described
+in (1) with both 5-point and 9-point Laplacians.
+
+I believe tip finding is quite reliable for well resolved simulations.
+For coarse-grained simulations it may fail miserably.
+
+With {\sf GRAPHICS} in {\em ezspiral.h} set to 0, none of the X11
+graphics is compiled and this should allow the code to run on {\em
+any} machine.  However, do not run EZ-Spiral on a vector machine
+without appropriate modification.
+
+{\bf IV. Equations and Parameters} 
+
+The model reaction-diffusion equations are [1,2]:
+$$
+\frac{\partial u }{ \partial t} = \nabla^2 u + 
+	\epsilon^{-1} u(1-u)(u-u_{th}(v)), ~~~
+\frac{\partial v }{ \partial t} = D_v \nabla^2 v + g(u,v)
+$$
+where in the simplest case
+$$
+u_{th}(v) = {{v+b}\over{a}}, ~~~
+g(u,v) = u-v, 
+$$ 
+so that $a,b,$ and $\epsilon$ are parameters of the reaction
+kinetics.  $D_v$ is the ratio of diffusion coefficients ($D_u \equiv
+1$ by choice of length scales). In addition, $L_x$ and $L_y$ are the lengths
+of the sides. Thus the ``physical'' parameters in the
+simulation are: $a, b, \epsilon, L_x, L_y$, and $D_v$.
+
+The method employed in EZ-Spiral is (essentially) independent of the
+choice of the functions $u_{th}(v)$ and $g(u,v)$ and the user is free
+to set these to whatever is desired.  See {\em ezstep.h}.
+
+The ``numerical'' parameters for the simulation are: {\sf nx}, {\sf ny}, {\sf
+ts} (= time step as fraction of the diffusion stability limit), and {\sf
+delta} (= small numerical parameter [1,2]).  The other parameters set in {\em
+task.dat} are more or less self-explanatory.
+
+Depending on the hardware you have, plotting can take a significant amount of
+time, so choose {\sf Time steps per plot} judiciously.  Also note that
+plotting the $u$-field is faster than plotting the $v$-field. See the code.
+
+{\bf V. Spiral Turbulence with EZ-Spiral} 
+
+I include in {\em ezstep.h} two choices for the slow kinetics $g(u,v)$
+other than the choice $g(u,v) = u-v$.  These are $g(u,v) = u^3-v$ and
+the function given by B\"ar and Eiswirth[5].  Both choices produce
+spiral breakup followed by spiral ``turbulence''.  Here I give a
+simple recipe for spiral turbulence.
+
+In {\em ezstep.h} turn off the ``standard model'' by putting {\sf \#if
+0} and turn on the ``simple model for turbulent spirals'' by putting
+{\sf \#if 1}.  Remake ezspiral.  Then in {\em task.dat} set: {\sf
+a=0.75, b=0.06, 1/eps=12.0, L=80, Dv=0, nx=ny=121, ts = 0.8}, and {\sf
+delta=1.e-4}.  Set the graphics parameters to your choice.  Now run
+ezspiral.  You should see spiral breakup followed by spiral
+turbulence. This simulation is only qualitatively correct.  For a more
+quantitative and convincing example, set {\sf 1/eps=14} and {\sf
+ndim=241} (and all other parameters as before).  This time you will
+see the formation of a single spiral.  After running sufficiently long
+that you are convinced that the spiral is stable, stop the simulation
+and move {\em fc.dat} to {\em ic.dat}.  Set {\sf 1/eps=12} and
+rerun.  You will now see the spiral breakup.  You can increase the
+spatial resolution still further if you desire and you can take
+several small steps in {\sf 1/eps} if you wish, but I believe you will
+get essentially the same result.
+
+
+{\bf References} 
+
+[1] D. Barkley, M. Kness, and L.S. Tuckerman, Phys. Rev. A {\bf 42}, 
+`2489 (1990).
+
+[2] D. Barkley, Physica {\bf 49D}, 61 (1991).
+
+[3] D. Barkley, Phys. Rev. Lett {\bf 68}, 2090 (1992).
+
+[4] D. Barkley, Phys. Rev. Lett. {\bf 72}, 164 (1994).
+
+[5] M. B\"ar and  M. Eiswirth, Phys. Rev. E {\bf 48}, 1635 (1993).
+
+[6] M. Dowel, R.M. Mantel and D. Barkley, Int. J. Bif. Chaos, 7(11) 2529--2546
+(1997).
+
+Please send comments to D.Barkley@warwick.ac.uk
+
+\end{document} 
