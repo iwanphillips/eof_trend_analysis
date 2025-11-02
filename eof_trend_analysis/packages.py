@@ -50,14 +50,16 @@ import importlib
 #import statsmodels.api as sm
 #from sklearn.preprocessing import StandardScaler
 #from numba import jit
-#import pkg_resources
-#import types
-#from typing import Optional, Union, List, Tuple
 
 from brokenaxes import brokenaxes
-#from wolframclient.evaluation import WolframLanguageSession
-#from wolframclient.language import wl
-#session = WolframLanguageSession('/Applications/Mathematica 13.1.app/Contents/MacOS/WolframKernel')
+
+'''
+# Using Mathematica code in python (for analytical results)
+
+from wolframclient.evaluation import WolframLanguageSession
+from wolframclient.language import wl
+session = WolframLanguageSession('/Applications/Mathematica 13.1.app/Contents/MacOS/WolframKernel')
+'''
 
 blues, bupu = cm.get_cmap('Blues'), cm.get_cmap('BuPu')
 rev_blues, rev_bupu = blues.reversed(), bupu.reversed()
@@ -68,8 +70,6 @@ params = {'xtick.labelsize': 22, 'ytick.labelsize': 22,
               'legend.handlelength': 2}
 
 def resize_colobar(event):
-    # Tell matplotlib to re-draw everything, so that we can get
-    # the correct location from get_position.
     plt.draw()
 
     posn = ax.get_position()
