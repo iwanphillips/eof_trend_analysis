@@ -1,13 +1,13 @@
 import base_time_series; import importlib; importlib.reload(base_time_series)
 from base_time_series import *
 
-# layout
-
+# Plot coastlines and borders on maps
 def set_pax(ax, lat1=0, lat2=0, lon1=0, lon2=0):
     
     ax.coastlines()
     ax.add_feature(cfeature.BORDERS)   
 
+# Add axes and borders to plots
 def set_ax(ax, lat1, lat2, lon1, lon2, xax=True, yax=True, 
            coast=True, border=True):
     
@@ -44,8 +44,7 @@ def resize_colobar(event):
                           0.04, posn.height])  
 
 
-# averaged signal
-
+# Calculate the Earth's radius
 def earth_radius(lat):
 
     a = 6378137
@@ -62,12 +61,8 @@ def earth_radius(lat):
 
     return r
 
-'''
+# Calculate the area of grids (e.g. a 1º by 1º grid) for different longitude and latitude
 def area_grid(lat, lon, wgt=True):
-
-    #Check why this weighting seems to produce different results
-    #   to the EOF weighting. Is it due to R? Maybe the absolute value
-    #   of cos(...) should be taken? Should it be sqrt(cos(...))?
 
     xlon, ylat = meshgrid(lon, lat)
     R = earth_radius(ylat)
@@ -85,6 +80,7 @@ def area_grid(lat, lon, wgt=True):
     
     return area 
 
+# Weights of grid sizes of Earth (considering spherical shape)
 def weights(lons, lats, T):
     
     nanlist = []
@@ -101,62 +97,14 @@ def weights(lons, lats, T):
         
         nanlist.append(notnan/n)
     
-    wgts = sqrt(abs(cos(deg2rad(lats))))*earth_radius(lats) 
-    wg = np.array(nanlist)*wgts
-    wgts /= sum(wg)/sum(nanlist) 
-    # wgts /= np.mean(wgts) if there are no nan's
-    
-    return(wgts)   
-'''
-
-def area_grid(lat, lon, wgt=True):
-
-    '''Check why this weighting seems to produce different results
-       to the EOF weighting. Is it due to R? Maybe the absolute value
-       of cos(...) should be taken? Should it be sqrt(cos(...))?'''
-
-    xlon, ylat = meshgrid(lon, lat)
-    R = earth_radius(ylat)
-
-    dlat = deg2rad(gradient(ylat, axis=0))
-    dlon = deg2rad(gradient(xlon, axis=1))
-
-    dy = dlat * R
-    dx = dlon * R * cos(deg2rad(ylat))
-
-    if wgt==True: 
-        area = dy * dx
-    if wgt==False:
-        area = dlat * dlon 
-    
-    return area 
-
-def weights(lons, lats, T):
-    
-    nanlist = []
-    for i in range(len(lats)): 
-        n, notnan = 0, 0
-        for j in range(len(lons)): 
-            lon, lat = lons[j], lats[i] 
-            T_zoom = T.sel(latitude=slice(lat, lat), longitude=slice(lon, lon))  
-            Tf = T_zoom['t2m'].values.flatten()
-            n += 1
-            if np.isnan(Tf).any(): continue
-            if not (Tf.tolist()):  continue
-            notnan += 1
-        
-        nanlist.append(notnan/n)
-    
-    #wgts = sqrt(abs(cos(deg2rad(lats))))*earth_radius(lats) 
-    #wgts = sqrt(abs(cos(deg2rad(lats))))*sqrt(earth_radius(lats))
     wgts = abs(cos(deg2rad(lats)))*earth_radius(lats)
     
     wg = np.array(nanlist)*wgts
     wgts /= sum(wg)/sum(nanlist) 
-    #wgts /= np.mean(wgts) # if there are no nan's
     
     return(wgts) 
-    
+
+# Calculate the average signal of all the different grids    
 def av_signal(T_, coor, step, per=[], season=None, weight=True, num=False, hem=None):
     
     if type(T_)==xr.core.dataset.Dataset or type(T_)==xr.core.dataarray.DataArray: T = T_
@@ -207,7 +155,7 @@ def av_signal(T_, coor, step, per=[], season=None, weight=True, num=False, hem=N
             if np.isnan(Tf).any(): continue
             if not (Tf.tolist()):  continue
                 
-            # for negative longitude I am assigning incorrect j,i in area function    
+            # for negative longitude the code needs some care   
             Td += np.array(Tf)*da_area[j, i]
             total_area += da_area[j, i] 
         
@@ -233,6 +181,7 @@ def smod(x):
     if x > 180: x -= 360
     return x
 
+# EOF analysis (and preparing the data by selecting seasons, time range, weighting, deseasoning etc.)
 def eof_run(T_, npcs=15, coor=None, t_slice=[], w=True, season=None, sv=None, step=1, ant=False): 
     
     if type(T_)==xr.core.dataset.Dataset or type(T_)==xr.core.dataarray.DataArray: T = T_
@@ -298,7 +247,6 @@ def eof_run(T_, npcs=15, coor=None, t_slice=[], w=True, season=None, sv=None, st
         weights_array = 1                
         solver = Eof(temp_detr) 
 
-    #pc  = solver.pcs(npcs=npcs, pcscaling=0) # *0* : Un-scaled PCs (default)
     pc  = solver.pcs(npcs=npcs)                  
     eof = solver.eofs(neofs=npcs)
     varfrac = solver.varianceFraction()
@@ -306,19 +254,11 @@ def eof_run(T_, npcs=15, coor=None, t_slice=[], w=True, season=None, sv=None, st
     
     return(weights_array, lons, lats, pc, eof, varfrac, lat1, lat2, lon1, lon2)
 
-# plot polar coordinates    
-# https://docs.dkrz.de/doc/visualization/sw/python/source_code/python-matplotlib-north-polar-stereographic.html    
-
-
+# Plot the first three PCs and EOFs
 def eof_plot(T_, nam, coor, a=1, b=1.01, sh='23', an=True, per=[], pcn=0, 
              proj='cartesian', cen=-90, shift=False, season=None, st='50', step=1):
    
     weights_array, lons, lats, pc, eof, varfrac, lat1, lat2, lon1, lon2 = eof_run(T_, coor=coor, t_slice=per, season=season, step=step)
-    #lat1, lat2, lon1, lon2 = int(coor[0]), int(coor[2]), int(coor[1]), int(coor[3])
-    #co = str(lat1) + '_' + str(lon1) + '_' + str(lat2) + '_' + str(lon2)
-
-    '''the pcs and eigenvalues should be correctly ordered at this point.
-        Otherwise I can just use printed list and arrange the eofs myself'''
         
     f, ax = plt.subplots(1, 3, figsize=(12, 2), sharey=False)
         
@@ -359,7 +299,7 @@ def eof_plot(T_, nam, coor, a=1, b=1.01, sh='23', an=True, per=[], pcn=0,
             
         tp.append(tp_); tarp.append(tarp_); pc_.append(pci)
 
-    #f.tight_layout() # better without
+    #f.tight_layout() 
     f.savefig('/Users/tphillips/Atmospheric time series/ecmwf/pc_norm_' + nam + '_pc_' + str(pcn) + '_' + st + '.png', format='png', dpi=120, bbox_inches="tight")
     
     if proj=='polar': proj_ = ccrs.NorthPolarStereo() # ccrs.AzimuthalEquidistant(central_latitude=cen) # ccrs.NorthPolarStereo()
@@ -487,6 +427,7 @@ def eof_plot(T_, nam, coor, a=1, b=1.01, sh='23', an=True, per=[], pcn=0,
     
     return(pc_, eof_, tp, tarp)
 
+# Normalize EOF's with spatial average weight
 def eof_rescale(f, nam, coor, clev, a=1, no=1, an=None, proj='cartesian', cen=-90, per=[], season=None):
     
     weights_array, lons, lats, pc, eof, varfrac = eof_run(f, coor=coor, t_slice=per, season=season)
@@ -496,8 +437,8 @@ def eof_rescale(f, nam, coor, clev, a=1, no=1, an=None, proj='cartesian', cen=-9
     clevs = np.linspace(clev[0], clev[1], 20)
     f, ax = plt.subplots(1, 1, figsize=(4, 2), sharey=True)
 
-    c = eof[no-1].flatten()                          
-    c = np.mean(c[~np.isnan(c)])                   
+    c = eof[no-1].flatten()                         
+    c = np.mean(c[~np.isnan(c)])      # Weight              
     pc1 = c*np.array(pc[:,no-1])                      
         
     eof1 = (1/c)*eof[no-1].squeeze()                  
@@ -524,7 +465,6 @@ def eof_rescale(f, nam, coor, clev, a=1, no=1, an=None, proj='cartesian', cen=-9
         set_pax(ax, lat2, lat1, lon1, lon2)
     if proj=='cartesian':
         f, ax = plt.subplots(1, 1, subplot_kw={'projection': ccrs.PlateCarree()}, figsize=(4, 6), sharey=False) 
-        #fill = ax.contourf(eof1, clevs, cmap=plt.cm.RdBu_r, transform = ccrs.PlateCarree())  
         fill = ax.contourf(lons, lats, eof1, clevs, cmap=plt.cm.RdBu_r, transform = ccrs.PlateCarree())  
         set_ax(ax, lat2, lat1, lon1, lon2) 
 
@@ -541,10 +481,10 @@ def eof_rescale(f, nam, coor, clev, a=1, no=1, an=None, proj='cartesian', cen=-9
     
     return(pc1, eof1, 2*tp_, 2*tarp_)
 
+# Calculate and weights PCs
 def eof_pcs(f, nam, coor, pcs=[1,2,3], npcs=40, per=[], weight=True, season=None, step=1):
     
     _, _, _, pc, eof, varfrac, _, _, _, _ = eof_run(f, npcs=npcs, coor=coor, t_slice=per, w=weight, season=season, step=step)
-    ''' if pcs=='single': replaced with eof_pc '''
     
     pcl, cl, vl = [], [], []
     pcs = [x-1 for x in pcs]
@@ -559,6 +499,7 @@ def eof_pcs(f, nam, coor, pcs=[1,2,3], npcs=40, per=[], weight=True, season=None
 
     return(cl, vl, pcl)
 
+# Calculate statistics for PCs
 def eof_pc(f, coor, per=[], weight=True, season=None):
     
     _, _, _, pc, eof, _, _, _, _, _ = eof_run(f, npcs=2, coor=coor, t_slice=per, w=weight, season=season)
@@ -574,30 +515,13 @@ def eof_pc(f, coor, per=[], weight=True, season=None):
         
     return(pc1, l)
 
-
+# Single EOF plot
 def recons(f, nam, coor, n=3, proj='cartesian', cen=-90, per=[], season=None, ant=False, clev=None):
     #T = xr.open_dataset(f)
    
     lat1, lat2, lon1, lon2 = int(coor[0]), int(coor[2]), int(coor[1]), int(coor[3]) 
     co = str(lat1) + '_' + str(lon1) + '_' + str(lat2) + '_' + str(lon2) 
     weights_array, lons, lats, pc, eof, _, _, _, _, _ = eof_run(f, coor=coor, t_slice=per, season=season, ant=ant)
-
-    #T_zoom = T.sel(latitude=slice(lat1, lat2), longitude=slice(lon1, lon2)) 
-    #T_detr = T_zoom.groupby("time.dayofyear") - T_zoom.groupby("time.dayofyear").mean('time') 
-    #temp_detr = T_detr['t2m'].values 
-    #lons = T_detr['longitude'].values 
-    #lats = T_detr['latitude'].values 
-    
-    #wgts = sqrt(abs(cos(deg2rad(lats))))*earth_radius(lats)            
-    #wgts *= len(wgts)/(sum(wgts))                      
-    #weights_array = wgts[:, np.newaxis]                
-
-    #solver = Eof(temp_detr, weights=weights_array)
-    #pc  = solver.pcs(npcs=15, pcscaling=0)
-   
-    #eof = solver.eofs(neofs=15) 
-    #varfrac = solver.varianceFraction()
-    #lambdas = solver.eigenvalues()
 
     for i in range(n): 
         pc1 = np.array(pc[:,i]) 
@@ -647,12 +571,10 @@ def recons(f, nam, coor, n=3, proj='cartesian', cen=-90, per=[], season=None, an
     else:
         cb = f.colorbar(fill, cax=cbar_ax, ticks=[np.nanmin(eofn), np.nanmax(eofn)], orientation='vertical')
 
-    #f.savefig('ecmwf/' + nam + '/recon_trend_n' + str(n) + '_' + co + '.png', format='png', dpi=120, bbox_inches="tight")
     f.savefig('ecmwf/recon_eof_n' + str(n) + '_' + co + '.png', format='png', dpi=120, bbox_inches="tight")
 
 
-    # adding pc's code
-
+# Adding PC's 
 def add_pc_plot(pcs, av_sig, par='m', name=None, sv=None): 
 
     par_l = np.array(pcs[par]) 
@@ -690,6 +612,7 @@ def add_pc_plot(pcs, av_sig, par='m', name=None, sv=None):
  
     plt.show() 
 
+# Adding PC's 
 def add_pc_plot_ax(ax, pcs, av_sig, par='m', name=None, xax=True): 
                                                                                                             
     par_l = np.array(pcs[par]) 
@@ -726,6 +649,7 @@ def tr(y):
     alph, r_trend = popt 
     return(np.abs(r_trend))
 
+# Ordering the PC's in different ways
 def order_pcs(pc_, eig, eofm, seq='eig'):
     if seq=='eig':
         index = list(range(len(pc_)))
@@ -753,6 +677,7 @@ def order_pcs(pc_, eig, eofm, seq='eig'):
 
     return(index, pc_)
 
+# Calculating statistics for added PC's
 def add_pc(pc_, eig, eofm, seq='eig', save=None):
 
     dl, al, ml, varl, tpl, tarpl, vtrl = [], [], [], [], [], [], []
@@ -781,7 +706,7 @@ def add_pc(pc_, eig, eofm, seq='eig', save=None):
     
     return(data, pc_add)
 
-
+# Print statistics for PCs
 def print_4pc(pc_, index=[0,1,2,3,4,5]):
     #_, _, _, _, tp_1, _, _             = p_val(pc_[index[0]], ar=0, an=True)
     tp_1, tp_2, tp_3, tp_4, tp_12, tp_34  = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
@@ -817,6 +742,7 @@ def print_4pc(pc_, index=[0,1,2,3,4,5]):
            [2*tp_ar1, 2*tp_ar2, 2*tp_ar3, 2*tp_ar4, 2*tp_ar12, 2*tp_ar34],
            [vtr1, vtr2, vtr3, vtr4, vtr12, vtr34])
 
+# Seasonal PCs
 def pc_seas(f, nam, coor, pcl, per, seq='eig', season=None, 
             step=1, df=pd.DataFrame({}), npcs=51):
 
@@ -830,7 +756,6 @@ def pc_seas(f, nam, coor, pcl, per, seq='eig', season=None,
     dl, al, rl, tl, atl, vtrl = print_4pc(pc_, index=index)
     dl.append(l_a['d'][0]); al.append(l_a['a'][0]); rl.append(l_a['m'][0])
     tl.append(l_a['tp'][0]); atl.append(l_a['tpar'][0]); vtrl.append(l_a['vtrar'][0])
-    # print('av.', l_a['m'][0], l_a['d'][0], l_a['tp'][0], l_a['tpar'][0]) 
 
     a_ = 365.25*10
     if df.empty==True: 
@@ -842,6 +767,7 @@ def pc_seas(f, nam, coor, pcl, per, seq='eig', season=None,
         df = df.append(df2)
     return(df)
 
+# Create table of statistics for seasonal PCs
 def print_pc_seas(f, nam, coor, seq='eig', step=1, 
                   npcs=51, per=['1979-01-01', '2022-12-31']): 
     pcl = ['1', '2', '3', '4', '12', '34', 'av']
@@ -853,9 +779,8 @@ def print_pc_seas(f, nam, coor, seq='eig', step=1,
     df = pc_seas(f, nam, coor, pcl, per, seq=seq, season='winter', step=step, df=df, npcs=npcs)
 
     return(df)
-
-##
-
+                      
+# Bar plot of statistics
 def bar_plot(df, s=21, sv=None, bar=False, ax1l=None, ax2l=None, lloc='upper right', 
              alpha=0.8, npc=2, dpi=120, size=(14, 5), scale='lin'):
 
@@ -903,7 +828,6 @@ def bar_plot(df, s=21, sv=None, bar=False, ax1l=None, ax2l=None, lloc='upper rig
 
     ax1.set_ylabel(r'$m$')
     ax1.set_xticks(x + width, species)
-    #ax1.set_ylim([-0.00001,0.0002])
     ax1.legend(loc=lloc, ncol=2, framealpha=alpha)
     ax1.grid(alpha=0.3)
     if ax1l: ax1.set_ylim(ax1l)
@@ -945,7 +869,7 @@ def bar_plot(df, s=21, sv=None, bar=False, ax1l=None, ax2l=None, lloc='upper rig
 
     plt.show()
 
-
+# Bar plot of p values
 def p_bar_plot(df, s=21, sv=None, lloc='upper right'):
 
     params = {'xtick.labelsize': s, 'ytick.labelsize': s, 'legend.fontsize': s-1.5,
@@ -983,6 +907,7 @@ def p_bar_plot(df, s=21, sv=None, lloc='upper right'):
 
     plt.show()
 
+# Bar plot of trends
 def m_bar_plot(df, s=21, sv=None, bar=False, up=0.35, lloc='upper right', q=False):
 
     params = {'xtick.labelsize': s, 'ytick.labelsize': s, 'legend.fontsize': s-1.5,
