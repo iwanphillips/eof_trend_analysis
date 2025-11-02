@@ -2,7 +2,6 @@ import base_spatial; import importlib; importlib.reload(base_spatial)
 from base_spatial import *
 
 # Plot d and it's error using DFA2 and DFA3
-
 def dfa_hist(temp, scale_lim=[5,10], s=[]):
 
     if s: plt.rcParams.update(s) #pylab.rcParams.update(s)
